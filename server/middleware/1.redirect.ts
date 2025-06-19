@@ -12,19 +12,26 @@ export default eventHandler(async (event) => {
     return sendRedirect(event, homeURL)
   
   // Anti-hotlink
-  const { ALLOWED_REFERERS, REDIRECT_URL } = 	event.context.cloudflare.env
+  if (!cloudflare?.env?.KV) {
+    console.error('KV not bound or missing in Worker environment')
+    return sendError(event, createError({ statusCode: 500, statusMessage: 'KV not available' }))
+  }
+  const KV = cloudflare.env.KV
   const referer = getRequestHeader(event, 'referer')
   if (referer) {
+    const rawReferers = await KV.get("a_allowed_referers")
+    let allowedReferers: string[] = []
     try {
-      const allowedReferers = JSON.parse(ALLOWED_REFERERS || '[]')
-      if (!allowedReferers.includes("*DISABLE*")) {
-        const matched = allowedReferers.some(domain => referer.includes(domain))
-        if (!matched) {
-          return sendRedirect(event, REDIRECT_URL, 302)
-        }
+      allowedReferers = JSON.parse(rawReferers || '[]')
+    } catch (e) {
+      console.error('Invalid allowed_referers JSON in KV:', e)
+    }
+    if (!allowedReferers.includes("*DISABLE*")) {
+      const matched = allowedReferers.some(domain => referer.includes(domain))
+      if (!matched) {
+        const redirectUrl = await KV.get("redirect_url")
+        return sendRedirect(event, redirectUrl, 302)
       }
-    } catch (err) {
-      console.error('Invalid ALLOWED_REFERERS format:', err)
     }
   }
 
