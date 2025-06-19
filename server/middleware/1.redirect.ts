@@ -1,12 +1,17 @@
 import type { LinkSchema } from '@@/schemas/link'
 import type { z } from 'zod'
 import { parsePath, withQuery } from 'ufo'
+import { isDevelopment } from 'std-env'
 
 export default eventHandler(async (event) => {
   const { pathname: slug } = parsePath(event.path.replace(/^\/|\/$/g, '')) // remove leading and trailing slashes
   const { slugRegex, reserveSlug } = useAppConfig(event)
   const { homeURL, linkCacheTtl, redirectWithQuery, caseSensitive } = useRuntimeConfig(event)
   const { cloudflare } = event.context
+
+  if (!event.context.cloudflare || !event.context.cloudflare.env || isDevelopment) {
+    return
+  }
   
   if (event.path === '/' && homeURL)
     return sendRedirect(event, homeURL)
