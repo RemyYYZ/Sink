@@ -13,6 +13,8 @@
    - `NUXT_SITE_TOKEN`: Must be at least **8** characters long. This token grants access to your dashboard.
    - `NUXT_CF_ACCOUNT_ID`: Find your [account ID](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/).
    - `NUXT_CF_API_TOKEN`: Create a [Cloudflare API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) with at least `Account.Account Analytics` permission. [See reference.](https://developers.cloudflare.com/analytics/analytics-engine/sql-api/#authentication)
+   - `REDIRECT_URL`: Add redirect links to hotlink protection rules. (eg.`https://example.com`)
+   - `ALLOWED_REFERERS`: Add a source whitelist to the anti-hotlink rule, using the inclusion judgment rule (eg.`["123.com", "456.com"]`, Referers that do not contain 123.com or 456.com will be redirected to `REDIRECT_URL`); And you can set `["*DISABLE*"]` to disable the hotlink protection rule.
 
 8. Enable Analytics Engine. In **Workers & Pages**, go to **Account details** in the right panel, locate **Analytics Engine**, and click **Set up** to enable the free tier.
 9. Redeploy the project.

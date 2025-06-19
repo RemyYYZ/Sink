@@ -7,17 +7,25 @@ export default eventHandler(async (event) => {
   const { slugRegex, reserveSlug } = useAppConfig(event)
   const { homeURL, linkCacheTtl, redirectWithQuery, caseSensitive } = useRuntimeConfig(event)
   const { cloudflare } = event.context
-
+  
   if (event.path === '/' && homeURL)
     return sendRedirect(event, homeURL)
   
-  // Referer 判断逻辑
+  // Anti-hotlink
+  const { ALLOWED_REFERERS, REDIRECT_URL } = cloudflare.env
   const referer = getRequestHeader(event, 'referer')
   if (referer) {
-    const allowedReferers = ['mcappx.com']
-    const isAllowed = allowedReferers.some(domain => referer.includes(domain))
-    if (!isAllowed)
-      return sendRedirect(event, 'https://www.mcappx.com/', 302)
+    try {
+      const allowedReferers = JSON.parse(ALLOWED_REFERERS || '[]')
+      if (!allowedReferers.includes("*DISABLE*")) {
+        const matched = allowedReferers.some(domain => referer.includes(domain))
+        if (!matched) {
+          return sendRedirect(event, REDIRECT_URL, 302)
+        }
+      }
+    } catch (err) {
+      console.error('Invalid ALLOWED_REFERERS format:', err)
+    }
   }
 
   if (slug && !reserveSlug.includes(slug) && slugRegex.test(slug) && cloudflare) {
