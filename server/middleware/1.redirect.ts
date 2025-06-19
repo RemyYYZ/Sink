@@ -34,7 +34,7 @@ export default eventHandler(async (event) => {
     if (!allowedReferers.includes("*DISABLE*")) {
       const matched = allowedReferers.some(domain => referer.includes(domain))
       if (!matched) {
-        const redirectUrl = await KV.get("redirect_url")
+        const redirectUrl = await KV.get("a_redirect_url")
         return sendRedirect(event, redirectUrl, 302)
       }
     }
