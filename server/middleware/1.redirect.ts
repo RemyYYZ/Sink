@@ -10,6 +10,15 @@ export default eventHandler(async (event) => {
 
   if (event.path === '/' && homeURL)
     return sendRedirect(event, homeURL)
+  
+  // Referer 判断逻辑
+  const referer = getRequestHeader(event, 'referer')
+  if (referer) {
+    const allowedReferers = ['mcappx.com']
+    const isAllowed = allowedReferers.some(domain => referer.includes(domain))
+    if (!isAllowed)
+      return sendRedirect(event, 'https://www.mcappx.com/', 302)
+  }
 
   if (slug && !reserveSlug.includes(slug) && slugRegex.test(slug) && cloudflare) {
     const { KV } = cloudflare.env
