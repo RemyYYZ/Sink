@@ -12,7 +12,7 @@ export default eventHandler(async (event) => {
     return sendRedirect(event, homeURL)
   
   // Anti-hotlink
-  const { ALLOWED_REFERERS, REDIRECT_URL } = cloudflare.env
+  const { ALLOWED_REFERERS, REDIRECT_URL } = 	event.context.cloudflare.env
   const referer = getRequestHeader(event, 'referer')
   if (referer) {
     try {
