@@ -1,26 +1,24 @@
-import { provider } from 'std-env'
+import process from 'node:process'
+import tailwindcss from '@tailwindcss/vite'
 import { currentLocales } from './i18n/i18n'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
-    '@nuxthub/core',
-    'shadcn-nuxt',
-    '@vueuse/motion/nuxt',
-    '@nuxt/eslint',
-    '@nuxtjs/tailwindcss',
     '@nuxtjs/color-mode',
     '@nuxtjs/i18n',
+    '@nuxt/eslint',
+    '@pinia/nuxt',
+    '@vueuse/motion/nuxt',
+    'shadcn-nuxt',
   ],
-
   devtools: { enabled: true },
-
+  css: ['@/assets/css/tailwind.css'],
   colorMode: {
     classSuffix: '',
   },
-
   runtimeConfig: {
-    siteToken: 'SinkCool',
+    siteToken: process.env.NUXT_SITE_TOKEN || crypto.randomUUID(),
     redirectStatusCode: '301',
     linkCacheTtl: 60,
     redirectWithQuery: false,
@@ -28,17 +26,18 @@ export default defineNuxtConfig({
     cfAccountId: '',
     cfApiToken: '',
     dataset: 'sink',
-    aiModel: '@cf/meta/llama-3.1-8b-instruct',
+    aiModel: '@cf/qwen/qwen3-30b-a3b-fp8',
     aiPrompt: `You are a URL shortening assistant, please shorten the URL provided by the user into a SLUG. The SLUG information must come from the URL itself, do not make any assumptions. A SLUG is human-readable and should not exceed three words and can be validated using regular expressions {slugRegex} . Only the best one is returned, the format must be JSON reference {"slug": "example-slug"}`,
     caseSensitive: false,
     listQueryLimit: 500,
     disableBotAccessLog: false,
+    disableAutoBackup: false,
     public: {
       previewMode: '',
       slugDefaultLength: '6',
+      kvBatchLimit: '50',
     },
   },
-
   routeRules: {
     '/': {
       prerender: true,
@@ -50,21 +49,16 @@ export default defineNuxtConfig({
     '/dashboard': {
       redirect: '/dashboard/links',
     },
+    '/api/**': {
+      cors: process.env.NUXT_API_CORS === 'true',
+    },
   },
-
-  future: {
-    compatibilityVersion: 4,
-  },
-
   experimental: {
     enforceModuleCompatibility: true,
   },
-
-  compatibilityDate: {
-    cloudflare: '2025-05-08',
-  },
-
+  compatibilityDate: 'latest',
   nitro: {
+    preset: !import.meta.env.CI ? 'cloudflare-module' : undefined,
     experimental: {
       openAPI: true,
     },
@@ -86,31 +80,27 @@ export default defineNuxtConfig({
       },
     },
   },
-
-  hub: {
-    ai: true,
-    analytics: true,
-    blob: false,
-    cache: false,
-    database: false,
-    kv: true,
-    workers: provider !== 'cloudflare_pages',
+  vite: {
+    plugins: [
+      tailwindcss(),
+    ],
   },
-
+  typescript: {
+    tsConfig: {
+      include: ['../schemas/**/*'],
+    },
+  },
   eslint: {
     config: {
-      stylistic: true,
       standalone: false,
     },
   },
-
   i18n: {
     locales: currentLocales,
     compilation: {
       strictMessage: false,
       escapeHtml: true,
     },
-    lazy: true,
     strategy: 'no_prefix',
     detectBrowserLanguage: {
       useCookie: true,
@@ -120,7 +110,6 @@ export default defineNuxtConfig({
     baseUrl: '/',
     defaultLocale: 'en-US',
   },
-
   shadcn: {
     /**
      * Prefix for all the imported component

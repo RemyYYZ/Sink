@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 const { t } = useI18n()
 
 const tabs = {
@@ -7,7 +7,7 @@ const tabs = {
   time: ['language', 'timezone'],
   device: ['device', 'deviceType'],
   browser: ['os', 'browser', 'browserType'],
-}
+} as const
 
 const translatedTabs = computed(() => ({
   location: tabs.location.map(tab => t(`dashboard.metrics.${tab}`)),
@@ -19,8 +19,18 @@ const translatedTabs = computed(() => ({
 </script>
 
 <template>
-  <main class="grid gap-8 lg:grid-cols-12">
-    <LazyDashboardAnalysisMetricsLocations class="col-span-1 lg:col-span-8" />
+  <main
+    class="
+      grid gap-8
+      lg:grid-cols-12
+    "
+  >
+    <LazyDashboardAnalysisMetricsLocations
+      class="
+        col-span-1
+        lg:col-span-8
+      "
+    />
     <DashboardAnalysisMetricsGroup
       class="lg:col-span-4"
       :tabs="translatedTabs.location"

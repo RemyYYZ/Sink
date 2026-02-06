@@ -1,5 +1,11 @@
+<script setup lang="ts">
+definePageMeta({
+  layout: 'default',
+})
+</script>
+
 <template>
-  <main class="flex items-center justify-center h-full">
+  <div class="flex flex-1 items-center justify-center">
     <Login />
-  </main>
+  </div>
 </template>

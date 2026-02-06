@@ -55,10 +55,10 @@ export type LogsMap = {
   [key in DoublesMap[DoublesKey]]?: number | undefined
 }
 
-export const logsMap = {
-  ...Object.entries(blobsMap).reduce((acc, [k, v]) => ({ ...acc, [v]: k }), {}),
-  ...Object.entries(doublesMap).reduce((acc, [k, v]) => ({ ...acc, [v]: k }), {}),
-} as LogsMap
+export const logsMap = Object.fromEntries([
+  ...Object.entries(blobsMap).map(([k, v]) => [v, k]),
+  ...Object.entries(doublesMap).map(([k, v]) => [v, k]),
+]) as LogsMap
 
 export function logs2blobs(logs: LogsMap) {
   return (Object.keys(blobsMap) as BlobsKey[])
@@ -102,15 +102,15 @@ export function useAccessLog(event: H3Event) {
 
   const userAgent = getHeader(event, 'user-agent') || ''
   const uaInfo = (new UAParser(userAgent, {
-    // eslint-disable-next-line ts/ban-ts-comment
+
     // @ts-expect-error
     browser: [Crawlers.browser || [], CLIs.browser || [], Emails.browser || [], Fetchers.browser || [], InApps.browser || [], MediaPlayers.browser || [], Vehicles.browser || []].flat(),
-    // eslint-disable-next-line ts/ban-ts-comment
+
     // @ts-expect-error
     device: [ExtraDevices.device || []].flat(),
   })).getResult()
 
-  const { request: { cf } } = event.context.cloudflare
+  const { request: { cf }, env } = event.context.cloudflare
   const link = event.context.link || {}
 
   const isBot = cf?.botManagement?.verifiedBot
@@ -149,14 +149,13 @@ export function useAccessLog(event: H3Event) {
   }
 
   if (process.env.NODE_ENV === 'production') {
-    return hubAnalytics().put({
+    return env.ANALYTICS.writeDataPoint({
       indexes: [link.id], // only one index
       blobs: logs2blobs(accessLogs),
       doubles: logs2doubles(accessLogs),
     })
   }
-  else {
-    console.log('access logs:', accessLogs, logs2blobs(accessLogs), logs2doubles(accessLogs), { ...blobs2logs(logs2blobs(accessLogs)), ...doubles2logs(logs2doubles(accessLogs)) })
-    return Promise.resolve()
-  }
+
+  console.log('access logs:', accessLogs, logs2blobs(accessLogs), logs2doubles(accessLogs), { ...blobs2logs(logs2blobs(accessLogs)), ...doubles2logs(logs2doubles(accessLogs)) })
+  return Promise.resolve()
 }
