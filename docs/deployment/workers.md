@@ -15,12 +15,6 @@
    - `NUXT_CF_ACCOUNT_ID`: Find your [account ID](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/).
    - `NUXT_CF_API_TOKEN`: Create a [Cloudflare API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) with at least `Account.Account Analytics` permission. [See reference.](https://developers.cloudflare.com/analytics/analytics-engine/sql-api/#authentication)
 
-8. Go to the KV namespace you created and add key values ​​to configure anti-hotlink rules:
-   - `a_redirect_url`: Add redirect links to hotlink protection rules. (eg.`https://example.com`)
-   - `a_allowed_referers`: Add a source whitelist to the anti-hotlink rule, using the inclusion judgment rule (eg.`["123.com", "456.com"]`, Referers that do not contain 123.com or 456.com will be redirected to `a_redirect_url`); And you can set `["*DISABLE*"]` to disable the hotlink protection rule.
-
-   **IMPORTANT**: If you want to use anti-hotlink function, you must create an `a_allowed_referers` property that includes the domain name of the website you are deploying; otherwise, you may experience infinite redirects.
-
 9. Enable Analytics Engine. In **Workers & Pages**, go to **Account details** in the right panel, locate **Analytics Engine**, and click **Set up** to enable the free tier. Name them `sink` and `ANALYTICS`, or else overwrite it with `NUXT_DATASET` and update your `wrangler.jsonc` accordingly
 10. Redeploy the project.
 11. To update your code, refer to the official GitHub documentation: [Syncing a fork branch from the web UI](https://docs.github.com/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork#syncing-a-fork-branch-from-the-web-ui 'GitHub: Syncing a fork').
