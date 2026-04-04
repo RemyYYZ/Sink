@@ -1,6 +1,5 @@
 import type { Link } from '@/types'
 import { parsePath, withQuery } from 'ufo'
-import { isDevelopment } from 'std-env'
 
 const SOCIAL_BOTS = [
   'applebot',
@@ -52,36 +51,8 @@ export default eventHandler(async (event) => {
   const { homeURL, linkCacheTtl, caseSensitive, redirectWithQuery, redirectStatusCode } = useRuntimeConfig(event)
   const { cloudflare } = event.context
 
-  if (!event.context.cloudflare || !event.context.cloudflare.env || isDevelopment) {
-    return
-  }
-
   if (event.path === '/' && homeURL)
     return sendRedirect(event, homeURL)
-
-  // Anti-hotlink
-  if (!cloudflare?.env?.KV) {
-    console.error('KV not bound or missing in Worker environment')
-    return sendError(event, createError({ statusCode: 500, statusMessage: 'KV not available' }))
-  }
-  const KV = cloudflare.env.KV
-  const referer = getRequestHeader(event, 'referer')
-  if (referer) {
-    const rawReferers = await KV.get("a_allowed_referers")
-    let allowedReferers: string[] = []
-    try {
-      allowedReferers = JSON.parse(rawReferers || '[]')
-    } catch (e) {
-      console.error('Invalid allowed_referers JSON in KV:', e)
-    }
-    if (!allowedReferers.includes("*DISABLE*")) {
-      const matched = allowedReferers.some(domain => referer.includes(domain))
-      if (!matched) {
-        const redirectUrl = await KV.get("a_redirect_url")
-        return sendRedirect(event, redirectUrl, 302)
-      }
-    }
-  }
 
   const { notFoundRedirect } = useRuntimeConfig(event)
   // Bypass redirect check for notFoundRedirect path to prevent infinite loop
@@ -101,6 +72,17 @@ export default eventHandler(async (event) => {
     }
 
     if (link) {
+      let locale: RedirectLocale | undefined
+      const getLocale = () => {
+        locale ??= resolveRedirectLocale(getHeader(event, 'accept-language'))
+        return locale
+      }
+      const sendNoStoreHtml = (html: string) => {
+        setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
+        setHeader(event, 'Cache-Control', 'no-store')
+        return html
+      }
+
       // Password protection check
       if (link.password) {
         const headerPassword = getHeader(event, 'x-link-password')
@@ -110,20 +92,38 @@ export default eventHandler(async (event) => {
           const submittedPassword = body?.password
 
           if (submittedPassword !== link.password) {
-            setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-            setHeader(event, 'Cache-Control', 'no-store')
-            return generatePasswordHtml(slug, true)
+            return sendNoStoreHtml(generatePasswordHtml(slug, { hasError: true, locale: getLocale() }))
+          }
+
+          // Password correct - show unsafe warning if needed
+          if (link.unsafe && body?.confirm !== 'true') {
+            return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { password: link.password, locale: getLocale() }))
           }
         }
         else if (headerPassword) {
           if (headerPassword !== link.password) {
             throw createError({ status: 403, statusText: 'Incorrect password' })
           }
+          // Header-password path: check unsafe warning via x-link-confirm header
+          if (link.unsafe && getHeader(event, 'x-link-confirm') !== 'true') {
+            throw createError({ status: 403, statusText: 'Unsafe link: confirmation required (set x-link-confirm: true header)' })
+          }
         }
         else {
-          setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-          setHeader(event, 'Cache-Control', 'no-store')
-          return generatePasswordHtml(slug)
+          return sendNoStoreHtml(generatePasswordHtml(slug, { locale: getLocale() }))
+        }
+      }
+
+      // Unsafe link warning (for links without password)
+      if (!link.password && link.unsafe) {
+        if (event.method === 'POST') {
+          const body = await readBody(event)
+          if (body?.confirm !== 'true') {
+            return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { locale: getLocale() }))
+          }
+        }
+        else {
+          return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { locale: getLocale() }))
         }
       }
 
